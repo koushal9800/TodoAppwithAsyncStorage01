@@ -1,118 +1,117 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, {useState, useEffect} from 'react';
+import {View, Text, TextInput, TouchableOpacity, FlatList} from 'react-native';
+// import { FlatList } from 'react-native-gesture-handler'
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const App = () => {
+  const [text, setText] = useState('');
+  const [tasks, setTasks] = useState([]);
+  const [editIndex,setEditIndex] = useState(null)
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+useEffect(()=>{
+  loadTask()
+},[])
+  const saveTask = async(tasks) =>{
+    try{
+      await AsyncStorage.setItem("tasks", JSON.stringify(tasks))
+    } catch (error) {
+      console.log("Error saving tasks:", error);
+    }
+  }
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  const loadTask = async ()=>{
+    try{
+    const storedTask = await AsyncStorage.getItem("tasks")
+    if(storedTask){
+      setTasks(JSON.parse(storedTask))
+    }
+  }catch (error) {
+    console.log("Error saving tasks:", error);
+  }
+  }
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const addText = () => {
+    if (text.trim()) {
+      const newTasks = [...tasks];
+      if(editIndex !== null){
+        newTasks[editIndex] = text
+        setEditIndex(null)
+      } else{
+        newTasks.push(text)
+      }
+      setTasks(newTasks);
+      saveTask(newTasks)
+      setText('');
+    }
   };
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+  const removeTask = (index)=>{
+    const newTasks = tasks.filter((_,item)=>item !== index)
+    setTasks(newTasks)
+    saveTask(newTasks)
+  }
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+  const editTask =(index)=>{
+setText(tasks[index])
+setEditIndex(index)
+  }
+
+  return (
+    <View>
+      <TextInput
+        value={text}
+        onChangeText={setText}
+        placeholder="Enter Todo"
+        style={{borderWidth: 1}}
+      />
+      <TouchableOpacity
+        onPress={addText}
+        style={{
+          backgroundColor: 'red',
+          padding: 12,
+          width: 50,
+          marginTop: 12,
+          alignSelf: 'center',
+        }}>
+        <Text style={{color: 'white'}}>Add</Text>
+      </TouchableOpacity>
+      <FlatList
+        data={tasks}
+        renderItem={({item, index}) => (
+          <View
+            style={{
+              padding: 20,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems:'center'
+            }}>
+            <Text>{item}</Text>
+            <View style={{flexDirection: 'row'}}>
+              <TouchableOpacity
+                onPress={()=>editTask(index)}
+                style={{
+                  backgroundColor: 'green',
+                  padding: 12,
+                  width: 50,
+                  alignSelf: 'center',
+                }}>
+                <Text style={{color: 'white'}}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={()=>removeTask(index)}
+                style={{
+                  backgroundColor: 'red',
+                  padding: 12,
+                  alignSelf: 'center',
+                }}>
+                <Text style={{color: 'white'}}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
+    </View>
+  );
+};
 
 export default App;
